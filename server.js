@@ -29,7 +29,10 @@ app.options("*", cors());
 app.set("io", io);
 
 // Middleware
-const allowedOrigins = ["http://localhost:5173", process.env.FRONTEND_URL];
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://study-group-frontend-rbt4gpthu-kennywestkhans-projects.vercel.app",
+];
 
 app.use(
   cors({
