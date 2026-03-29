@@ -27,10 +27,25 @@ const io = new Server(server, {
 app.set('io', io);
 
 // Middleware
-app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true
-}));
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://studgroup-backend.onrender.com",
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS not allowed"));
+      }
+    },
+    credentials: true,
+  }),
+);
+
+
 app.use(express.json());
 
 const rateLimit = require('express-rate-limit');
