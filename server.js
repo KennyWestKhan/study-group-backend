@@ -23,7 +23,7 @@ const io = new Server(server, {
   },
 });
 
-app.options("*", cors());
+// app.options("/*", cors());
 
 // Make io accessible in controllers
 app.set("io", io);
@@ -41,10 +41,11 @@ app.use(
         callback(null, true);
       } else {
         console.warn("Blocked by CORS:", origin);
-        callback(null, false); // don't throw error
+        callback(null, false);
       }
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   }),
 );
 
