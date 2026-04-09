@@ -1,4 +1,4 @@
-const { StudySession, SessionMember, User } = require('../models');
+const { StudySession, SessionMember, User, Message } = require('../models');
 
 // @desc    Create a study session
 // @route   POST /api/sessions
@@ -212,4 +212,21 @@ const deleteSession = async (req, res) => {
   }
 };
 
-module.exports = { createSession, getSessions, joinSession, leaveSession, updateSession, deleteSession };
+// @desc    Get messages for a study session
+// @route   GET /api/sessions/:id/messages
+// @access  Private
+const getSessionMessages = async (req, res) => {
+  try {
+    const messages = await Message.findAll({
+      where: { session_id: req.params.id },
+      include: [{ model: User, attributes: ['id', 'name'] }],
+      order: [['createdAt', 'ASC']]
+    });
+    res.json(messages);
+  } catch (error) {
+    console.error('Get messages error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+module.exports = { createSession, getSessions, joinSession, leaveSession, updateSession, deleteSession, getSessionMessages };

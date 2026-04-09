@@ -39,19 +39,33 @@ const getDashboardStats = async (req, res) => {
 
     const totalHours = allLogs.reduce((acc, log) => acc + log.hours_studied, 0);
 
-    // Grouping manually to avoid strict SQL GROUP BY issues
     const topicStats = {};
     allLogs.forEach(log => {
-      if (!topicStats[log.topic]) {
-        topicStats[log.topic] = 0;
-      }
+      if (!topicStats[log.topic]) topicStats[log.topic] = 0;
       topicStats[log.topic] += log.hours_studied;
     });
+
+    // Build last-7-days hourly breakdown for the activity chart
+    const today = new Date();
+    const weeklyHours = [];
+    const dayLabels = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      dayLabels.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
+      const dayTotal = allLogs
+        .filter(log => log.logged_date === dateStr)
+        .reduce((acc, log) => acc + log.hours_studied, 0);
+      weeklyHours.push(dayTotal);
+    }
 
     res.json({
       totalHours,
       topicStats,
-      recentLogs: allLogs.slice(0, 5) // Show top 5 recent logs
+      recentLogs: allLogs.slice(0, 5),
+      weeklyHours,
+      dayLabels
     });
   } catch (error) {
     console.error('Dashboard stats error:', error);

@@ -22,45 +22,45 @@ const getMatches = async (req, res) => {
       ]
     });
     
-    // Check if user has availability JSON
-    // Default format expected: ["Monday 10:00", "Tuesday 14:00"]
-    // A session overlap is positive if session.time falls into user's availability, 
-    // or if we just detect the same day of the week since time is a Date. We'll extract 
-    // the day of the week from session.time and check if user availability includes it.
-    const userAvailStr = user.availability ? JSON.stringify(user.availability).toLowerCase() : '';
+    // Check if user availability contains the session's day of week
+    // availability is stored as JSON array e.g. ["Monday 10:00", "Wednesday 14:00"]
+    let availabilityDays = [];
+    if (user.availability) {
+      const avail = Array.isArray(user.availability) ? user.availability : [];
+      availabilityDays = avail.map(entry =>
+        typeof entry === 'string' ? entry.split(' ')[0].toLowerCase() : ''
+      );
+    }
 
     const scoredSessions = sessions.map(session => {
       let score = 0;
-      
-      // Algorithm
+
       // +40 if same course
       if (user.course && session.course.toLowerCase().includes(user.course.toLowerCase())) {
         score += 40;
       }
-      
+
       // +30 if overlapping availability
-      if (userAvailStr) {
-        // Simple overlap: check if the session's day of week or generic day string matches
-        const sessionDay = new Date(session.time).toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-        if (userAvailStr.includes(sessionDay)) {
+      if (availabilityDays.length > 0) {
+        const sessionDay = new Date(session.time)
+          .toLocaleDateString('en-US', { weekday: 'long' })
+          .toLowerCase();
+        if (availabilityDays.includes(sessionDay)) {
           score += 30;
         }
       }
-      
+
       // +20 if same skill level
       if (session.creator && session.creator.skill_level === user.skill_level) {
         score += 20;
       }
-      
+
       // +10 if same location
       if (user.location && session.location.toLowerCase() === user.location.toLowerCase()) {
         score += 10;
       }
-      
-      return {
-        ...session.toJSON(),
-        match_score: score
-      };
+
+      return { ...session.toJSON(), match_score: score };
     });
     
     // Sort highest score first

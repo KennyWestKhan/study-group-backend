@@ -29,10 +29,9 @@ const io = new Server(server, {
 app.set("io", io);
 
 // Middleware
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://study-group-frontend-rbt4gpthu-kennywestkhans-projects.vercel.app",
-];
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:5173'];
 
 app.use(
   cors({
