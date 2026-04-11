@@ -32,6 +32,10 @@ const User = sequelize.define('User', {
   },
   location: {
     type: DataTypes.STRING,
+  },
+  expertise: {
+    type: DataTypes.JSON,
+    allowNull: true,
   }
 }, {
   timestamps: true,

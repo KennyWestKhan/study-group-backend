@@ -57,7 +57,16 @@ const getMatches = async (req, res) => {
         score += 20;
       }
 
-      // Factor 4: Location Convenience (+10)
+      // Factor 4: Expertise Alignment (+25)
+      if (user.expertise && Array.isArray(user.expertise)) {
+        const hasSkill = user.expertise.some(skill => 
+          session.course.toLowerCase().includes(skill.toLowerCase()) || 
+          skill.toLowerCase().includes(session.course.toLowerCase())
+        );
+        if (hasSkill) score += 25;
+      }
+
+      // Factor 5: Location Convenience (+10)
       if (user.location && session.location.toLowerCase() === user.location.toLowerCase()) {
         score += 10;
       }

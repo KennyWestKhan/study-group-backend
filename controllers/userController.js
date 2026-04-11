@@ -36,6 +36,7 @@ const updateProfile = async (req, res) => {
     user.skill_level = req.body.skill_level || user.skill_level;
     if (req.body.availability !== undefined) user.availability = req.body.availability;
     user.location = req.body.location || user.location;
+    if (req.body.expertise !== undefined) user.expertise = req.body.expertise;
 
     await user.save();
 
@@ -46,7 +47,8 @@ const updateProfile = async (req, res) => {
       course: user.course,
       skill_level: user.skill_level,
       availability: user.availability,
-      location: user.location
+      location: user.location,
+      expertise: user.expertise
     });
   } catch (error) {
     console.error('Update profile error:', error);
