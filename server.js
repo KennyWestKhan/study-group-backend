@@ -1,5 +1,7 @@
 const express = require("express");
 const http = require("http");
+// Triggering DB sync check for description field
+const path = require("path");
 const cors = require("cors");
 const { Server } = require("socket.io");
 require("dotenv").config();
@@ -51,6 +53,7 @@ app.use(
 );
 
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const rateLimit = require("express-rate-limit");
 const globalLimiter = rateLimit({

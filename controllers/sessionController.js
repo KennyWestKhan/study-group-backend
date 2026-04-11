@@ -1,11 +1,12 @@
-const { StudySession, SessionMember, User, Message } = require('../models');
+const { StudySession, SessionMember, User, Message, File } = require('../models');
+const { uploadFile } = require('../services/storageService');
 
 // @desc    Create a study session
 // @route   POST /api/sessions
 // @access  Private
 const createSession = async (req, res) => {
   try {
-    const { course, time, location, max_members } = req.body;
+    const { course, description, time, location, max_members, skill_level } = req.body;
 
     if (!course || !time || !location) {
       return res.status(400).json({ message: 'Please provide course, time and location' });
@@ -17,16 +18,12 @@ const createSession = async (req, res) => {
     const session = await StudySession.create({
       creator_id: req.user.id,
       course,
+      description,
       time,
       location,
       max_members: max_members || 5,
+      skill_level: skill_level || 'Beginner',
       status: 'Open'
-    });
-
-    // Auto join the creator to the session
-    await SessionMember.create({
-      session_id: session.id,
-      user_id: req.user.id
     });
 
     res.status(201).json(session);
@@ -38,10 +35,14 @@ const createSession = async (req, res) => {
 
 // @desc    Get all study sessions
 // @route   GET /api/sessions
-// @access  Public or Private (depending on preference)
+// @access  Private
 const getSessions = async (req, res) => {
   try {
+    const { Op } = require('sequelize');
     const sessions = await StudySession.findAll({
+      where: {
+        status: { [Op.ne]: 'Closed' }
+      },
       include: [
         { model: User, as: 'creator', attributes: ['id', 'name'] },
         { model: User, as: 'members', attributes: ['id', 'name'] }
@@ -73,7 +74,6 @@ const joinSession = async (req, res) => {
       return res.status(400).json({ message: 'Session is full' });
     }
 
-    // Check if user already joined
     const isMember = session.members.some(member => member.id === req.user.id);
     if (isMember) {
       return res.status(400).json({ message: 'You have already joined this session' });
@@ -84,13 +84,11 @@ const joinSession = async (req, res) => {
       user_id: req.user.id
     });
 
-    // Check if it's now full and update status
     if (session.members.length + 1 >= session.max_members) {
       session.status = 'Full';
       await session.save();
     }
 
-    // Emit in-app notification to the group using Socket.io
     const io = req.app.get('io');
     if (io) {
       io.to(session.id.toString()).emit('notification', {
@@ -132,13 +130,11 @@ const leaveSession = async (req, res) => {
       }
     });
 
-    // If session was full, and member left, open it up
     if (session.status === 'Full') {
       session.status = 'Open';
       await session.save();
     }
 
-    // Emit in-app notification
     const io = req.app.get('io');
     if (io) {
       io.to(session.id.toString()).emit('notification', {
@@ -170,13 +166,15 @@ const updateSession = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to update this session' });
     }
 
-    const { course, time, location, max_members, status } = req.body;
+    const { course, description, time, location, max_members, status, skill_level } = req.body;
 
     session.course = course || session.course;
+    session.description = description !== undefined ? description : session.description;
     session.time = time || session.time;
     session.location = location || session.location;
     session.max_members = max_members || session.max_members;
     session.status = status || session.status;
+    session.skill_level = skill_level || session.skill_level;
 
     await session.save();
 
@@ -229,6 +227,52 @@ const getSessionMessages = async (req, res) => {
   }
 };
 
+// @desc    Upload a file to a study session
+// @route   POST /api/sessions/:id/files
+// @access  Private
+const uploadSessionFile = async (req, res) => {
+  try {
+    const sessionId = req.params.id;
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const uploadResult = await uploadFile(req.file);
+    
+    const file = await File.create({
+      session_id: sessionId,
+      user_id: req.user.id,
+      filename: uploadResult.filename,
+      url: uploadResult.url,
+      mimetype: uploadResult.mimetype,
+      size: uploadResult.size,
+      storage_type: uploadResult.storage_type
+    });
+
+    res.status(201).json(file);
+  } catch (error) {
+    console.error('File upload error:', error);
+    res.status(500).json({ message: 'Server error during file upload' });
+  }
+};
+
+// @desc    Get all files for a study session
+// @route   GET /api/sessions/:id/files
+// @access  Private
+const getSessionFiles = async (req, res) => {
+  try {
+    const files = await File.findAll({
+      where: { session_id: req.params.id },
+      include: [{ model: User, attributes: ['id', 'name'] }],
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(files);
+  } catch (error) {
+    console.error('Get files error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // @desc    Get a study session by ID
 // @route   GET /api/sessions/:id
 // @access  Private
@@ -252,4 +296,15 @@ const getSessionById = async (req, res) => {
   }
 };
 
-module.exports = { createSession, getSessions, joinSession, leaveSession, updateSession, deleteSession, getSessionMessages, getSessionById };
+module.exports = { 
+  createSession, 
+  getSessions, 
+  joinSession, 
+  leaveSession, 
+  updateSession, 
+  deleteSession, 
+  getSessionMessages, 
+  getSessionById,
+  uploadSessionFile,
+  getSessionFiles
+};

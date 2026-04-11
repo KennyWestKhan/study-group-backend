@@ -4,6 +4,7 @@ const StudySession = require('./StudySession');
 const SessionMember = require('./SessionMember');
 const Message = require('./Message');
 const StudyLog = require('./StudyLog');
+const File = require('./File');
 
 // 1. Users and StudySessions (Creator)
 User.hasMany(StudySession, { foreignKey: 'creator_id', as: 'createdSessions' });
@@ -24,9 +25,24 @@ Message.belongsTo(StudySession, { foreignKey: 'session_id' });
 User.hasMany(StudyLog, { foreignKey: 'user_id' });
 StudyLog.belongsTo(User, { foreignKey: 'user_id' });
 
+// 5. Files and Sessions
+StudySession.hasMany(File, { foreignKey: 'session_id' });
+File.belongsTo(StudySession, { foreignKey: 'session_id' });
+
+User.hasMany(File, { foreignKey: 'user_id' });
+File.belongsTo(User, { foreignKey: 'user_id' });
+
 // Initialize database syncing (use force: false for production)
 const syncDB = async () => {
   try {
+    // 0. Manual column check for description (alter: true can be finicky)
+    try {
+      await sequelize.query('ALTER TABLE "StudySessions" ADD COLUMN IF NOT EXISTS "description" TEXT');
+      console.log('Ensured "description" column exists in StudySessions');
+    } catch (e) {
+      console.error('Column check error:', e.message);
+    }
+
     // Note: Do not use { force: true } in production, it will drop tables
     await sequelize.sync({ alter: true });
     console.log('All models were synchronized successfully.');
@@ -42,5 +58,6 @@ module.exports = {
   StudySession,
   SessionMember,
   Message,
-  StudyLog
+  StudyLog,
+  File
 };

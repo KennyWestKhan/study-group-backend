@@ -11,7 +11,7 @@ const getMatches = async (req, res) => {
     // Find all Open sessions
     const sessions = await StudySession.findAll({
       where: {
-        status: 'Open',
+        status: { [Op.ne]: 'Closed' },
         time: {
           [Op.gt]: new Date()
         }
@@ -35,27 +35,29 @@ const getMatches = async (req, res) => {
     const scoredSessions = sessions.map(session => {
       let score = 0;
 
-      // +40 if same course
+      // Factor 1: Course Alignment (+50)
       if (user.course && session.course.toLowerCase().includes(user.course.toLowerCase())) {
-        score += 40;
+        score += 50;
+      } else if (user.course && user.course.toLowerCase().includes(session.course.toLowerCase())) {
+        score += 30; // Inverse match
       }
 
-      // +30 if overlapping availability
+      // Factor 2: Availability (+20)
       if (availabilityDays.length > 0) {
         const sessionDay = new Date(session.time)
           .toLocaleDateString('en-US', { weekday: 'long' })
           .toLowerCase();
         if (availabilityDays.includes(sessionDay)) {
-          score += 30;
+          score += 20;
         }
       }
 
-      // +20 if same skill level
-      if (session.creator && session.creator.skill_level === user.skill_level) {
+      // Factor 3: Skill Level Alignment (+20)
+      if (session.skill_level === user.skill_level) {
         score += 20;
       }
 
-      // +10 if same location
+      // Factor 4: Location Convenience (+10)
       if (user.location && session.location.toLowerCase() === user.location.toLowerCase()) {
         score += 10;
       }

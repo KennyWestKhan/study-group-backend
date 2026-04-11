@@ -11,6 +11,10 @@ const StudySession = sequelize.define('StudySession', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
   time: {
     type: DataTypes.DATE,
     allowNull: false,
@@ -27,8 +31,12 @@ const StudySession = sequelize.define('StudySession', {
     type: DataTypes.INTEGER,
     defaultValue: 5,
   },
+  skill_level: {
+    type: DataTypes.ENUM('Beginner', 'Intermediate', 'Advanced'),
+    defaultValue: 'Beginner',
+  },
   status: {
-    type: DataTypes.ENUM('Open', 'Full'),
+    type: DataTypes.STRING,
     defaultValue: 'Open',
   }
 }, {
