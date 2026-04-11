@@ -3,9 +3,9 @@ const { registerUser, loginUser, forgotPassword, resetPassword } = require('../c
 const rateLimit = require('express-rate-limit');
 
 const authLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10,
-  message: { message: 'Too many attempts from this IP, please try again after an hour' },
+  windowMs: 15 * 60 * 1000, // Reduced window to 15 mins for better UX
+  max: 50, // Increased limit for development/testing
+  message: { message: 'Too many auth attempts from this IP, please try again after 15 minutes' },
   standardHeaders: true,
   legacyHeaders: false
 });

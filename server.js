@@ -76,41 +76,74 @@ app.get("/", (req, res) => {
 });
 
 // Socket.io connection handling
+// In-memory store for active users in rooms
+// { roomId: { socketId: { id, name } } }
+const roomUsers = {};
+
 io.on("connection", (socket) => {
   console.log("User connected to socket:", socket.id);
 
-  // Join a study session chat room
-  socket.on("join_room", (sessionId) => {
+  socket.on("join_room", (data) => {
+    const rawId = typeof data === "string" ? data : data.sessionId;
+    const sessionId = String(rawId);
+    const user = data.user;
+
     socket.join(sessionId);
-    console.log(`User ${socket.id} joined room: ${sessionId}`);
+
+    if (user) {
+      if (!roomUsers[sessionId]) roomUsers[sessionId] = {};
+      roomUsers[sessionId][socket.id] = { id: user.id, name: user.name };
+
+      const users = Object.values(roomUsers[sessionId]);
+      console.log(`User list updated for room ${sessionId}:`, users);
+      io.to(sessionId).emit("update_user_list", users);
+    }
+
+    console.log(`User ${user?.name || socket.id} joined room: ${sessionId}`);
   });
 
-  // Handle messages
   socket.on("send_message", async (data) => {
     try {
-      // data: { session_id, user_id, content, userName }
+      const sessionId = String(data.session_id);
+      console.log(`Message received for room ${sessionId}:`, data.content);
+
       const message = await Message.create({
         session_id: data.session_id,
         user_id: data.user_id,
         content: data.content,
       });
 
-      // Broadcast to room
-      io.to(data.session_id).emit("receive_message", {
+      const broadcastData = {
         id: message.id,
         session_id: data.session_id,
         user_id: data.user_id,
         userName: data.userName,
         content: data.content,
         createdAt: message.createdAt,
-      });
+      };
+
+      io.to(sessionId).emit("receive_message", broadcastData);
+      console.log(`Broadcasted message to room ${sessionId}`);
     } catch (err) {
       console.error("Socket message error:", err);
     }
   });
 
   socket.on("disconnect", () => {
-    console.log("User disconnected from socket:", socket.id);
+    for (const sessionId in roomUsers) {
+      if (roomUsers[sessionId][socket.id]) {
+        const userName = roomUsers[sessionId][socket.id].name;
+        delete roomUsers[sessionId][socket.id];
+        
+        if (Object.keys(roomUsers[sessionId]).length === 0) {
+          delete roomUsers[sessionId];
+        } else {
+          io.to(sessionId).emit("update_user_list", Object.values(roomUsers[sessionId]));
+        }
+        console.log(`User ${userName} disconnected from room ${sessionId}`);
+        break;
+      }
+    }
   });
 });
 
