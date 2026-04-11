@@ -15,11 +15,16 @@ const logRoutes = require("./routes/logRoutes");
 const app = express();
 const server = http.createServer(app);
 
+// Middleware & Configuration
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : [];
 // Initialize Socket.io
 const io = new Server(server, {
   cors: {
-    origin: "*", // Adjust for production
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
+    credentials: true
   },
 });
 
@@ -29,10 +34,6 @@ const io = new Server(server, {
 app.set("io", io);
 
 // Middleware
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',')
-  : ['http://localhost:5173'];
-
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -40,6 +41,7 @@ app.use(
         callback(null, true);
       } else {
         console.warn("Blocked by CORS:", origin);
+        console.warn({allowedOrigins});
         callback(null, false);
       }
     },
