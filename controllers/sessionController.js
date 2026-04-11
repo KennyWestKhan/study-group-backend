@@ -229,4 +229,27 @@ const getSessionMessages = async (req, res) => {
   }
 };
 
-module.exports = { createSession, getSessions, joinSession, leaveSession, updateSession, deleteSession, getSessionMessages };
+// @desc    Get a study session by ID
+// @route   GET /api/sessions/:id
+// @access  Private
+const getSessionById = async (req, res) => {
+  try {
+    const session = await StudySession.findByPk(req.params.id, {
+      include: [
+        { model: User, as: 'creator', attributes: ['id', 'name'] },
+        { model: User, as: 'members', attributes: ['id', 'name'] }
+      ]
+    });
+
+    if (!session) {
+      return res.status(404).json({ message: 'Session not found' });
+    }
+
+    res.json(session);
+  } catch (error) {
+    console.error('Get session by ID error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+module.exports = { createSession, getSessions, joinSession, leaveSession, updateSession, deleteSession, getSessionMessages, getSessionById };
