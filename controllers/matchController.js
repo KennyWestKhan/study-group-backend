@@ -71,7 +71,11 @@ const getMatches = async (req, res) => {
         score += 10;
       }
 
-      return { ...session.toJSON(), match_score: score };
+      const roomUsers = req.app.get('roomUsers') || {};
+      const activeInfo = roomUsers[session.id.toString()] || {};
+      const activeCount = Object.keys(activeInfo).length;
+
+      return { ...session.toJSON(), match_score: score, active_count: activeCount };
     });
     
     // Sort highest score first

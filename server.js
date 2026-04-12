@@ -84,6 +84,7 @@ app.get("/", (req, res) => {
 // In-memory store for active users in rooms
 // { roomId: { socketId: { id, name } } }
 const roomUsers = {};
+app.set("roomUsers", roomUsers);
 
 io.on("connection", (socket) => {
   console.log("User connected to socket:", socket.id);

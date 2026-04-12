@@ -14,6 +14,9 @@ const createSession = async (req, res) => {
     if (isNaN(new Date(time).getTime())) {
       return res.status(400).json({ message: 'Invalid datetime format for time' });
     }
+    if (max_members && parseInt(max_members) > 5) {
+      return res.status(400).json({ message: 'Maximum members cannot exceed 5' });
+    }
 
     const session = await StudySession.create({
       creator_id: req.user.id,
@@ -25,8 +28,22 @@ const createSession = async (req, res) => {
       skill_level: skill_level || 'Beginner',
       status: 'Open'
     });
+    
+    // Automatically add the creator as a member
+    await SessionMember.create({
+      session_id: session.id,
+      user_id: req.user.id
+    });
 
-    res.status(201).json(session);
+    // Reload the session with associations to ensure frontend has member data
+    const fullSession = await StudySession.findByPk(session.id, {
+      include: [
+        { model: User, as: 'creator', attributes: ['id', 'name'] },
+        { model: User, as: 'members', attributes: ['id', 'name'] }
+      ]
+    });
+
+    res.status(201).json(fullSession);
   } catch (error) {
     console.error('Create session error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -49,7 +66,14 @@ const getSessions = async (req, res) => {
       ],
       order: [['time', 'ASC']]
     });
-    res.json(sessions);
+    const roomUsers = req.app.get('roomUsers') || {};
+    const sessionsWithActive = sessions.map(s => {
+      const activeInfo = roomUsers[s.id.toString()] || {};
+      const activeCount = Object.keys(activeInfo).length;
+      return { ...s.toJSON(), active_count: activeCount };
+    });
+
+    res.json(sessionsWithActive);
   } catch (error) {
     console.error('Get sessions error:', error);
     res.status(500).json({ message: 'Server error' });

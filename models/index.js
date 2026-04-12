@@ -45,6 +45,24 @@ const syncDB = async () => {
 
     // Note: Do not use { force: true } in production, it will drop tables
     await sequelize.sync({ alter: true });
+    
+    // One-time fix: Add creators to their sessions
+    try {
+      const { StudySession, SessionMember } = require('./index');
+      const sessions = await StudySession.findAll();
+      let fixed = 0;
+      for (const s of sessions) {
+        const isM = await SessionMember.findOne({ where: { session_id: s.id, user_id: s.creator_id } });
+        if (!isM) {
+          await SessionMember.create({ session_id: s.id, user_id: s.creator_id });
+          fixed++;
+        }
+      }
+      if (fixed > 0) console.log(`Backfilled ${fixed} session memberships for hosts.`);
+    } catch (e) { 
+      console.log('Membership fix error:', e.message); 
+    }
+
     console.log('All models were synchronized successfully.');
   } catch (error) {
     console.error('Error synchronizing models:', error);
