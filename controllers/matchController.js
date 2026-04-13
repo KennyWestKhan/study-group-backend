@@ -11,7 +11,6 @@ const getMatches = async (req, res) => {
     // Find all Open sessions
     const sessions = await StudySession.findAll({
       where: {
-        status: { [Op.ne]: 'Closed' },
         time: {
           [Op.gt]: new Date()
         }

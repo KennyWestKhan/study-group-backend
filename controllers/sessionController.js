@@ -57,9 +57,7 @@ const getSessions = async (req, res) => {
   try {
     const { Op } = require('sequelize');
     const sessions = await StudySession.findAll({
-      where: {
-        status: { [Op.ne]: 'Closed' }
-      },
+      // Removed status filter to keep sessions visible after closure
       include: [
         { model: User, as: 'creator', attributes: ['id', 'name'] },
         { model: User, as: 'members', attributes: ['id', 'name'] }
@@ -108,10 +106,13 @@ const joinSession = async (req, res) => {
       user_id: req.user.id
     });
 
-    if (session.members.length + 1 >= session.max_members) {
+    if (session.status === 'Closed') {
+      session.status = (session.members.length + 1 >= session.max_members) ? 'Full' : 'Open';
+    } else if (session.members.length + 1 >= session.max_members) {
       session.status = 'Full';
-      await session.save();
     }
+    
+    await session.save();
 
     const io = req.app.get('io');
     if (io) {
